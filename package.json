@@ -1,0 +1,21 @@
+{
+  "name": "technical-indicator-engine",
+  "version": "1.0.0",
+  "description": "Production-grade technical indicator computation engine for OHLCV data",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "technical-indicators",
+    "trading",
+    "ohlcv",
+    "rsi",
+    "macd",
+    "bollinger-bands"
+  ],
+  "author": "",
+  "license": "MIT"
+}

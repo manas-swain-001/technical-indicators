@@ -1,0 +1,85 @@
+{
+  "indicators": {
+    "RSI": {
+      "period": 14
+    },
+    "SMA": {
+      "periods": [
+        10,
+        20
+      ]
+    },
+    "EMA": {
+      "periods": [
+        9,
+        21
+      ]
+    },
+    "WMA": {
+      "period": 20
+    },
+    "MACD": {
+      "fast": 12,
+      "slow": 26,
+      "signal": 9
+    },
+    "BB": {
+      "period": 20,
+      "stdDev": 2
+    },
+    "ATR": {
+      "period": 14
+    },
+    "ADX": {
+      "period": 14
+    },
+    "STOCH": {
+      "kPeriod": 14,
+      "dPeriod": 3
+    },
+    "CCI": {
+      "period": 20
+    },
+    "ROC": {
+      "period": 14
+    },
+    "MOM": {
+      "period": 10
+    },
+    "WILLR": {
+      "period": 14
+    },
+    "DONCHIAN": {
+      "period": 20
+    },
+    "ICHIMOKU": {
+      "conversion": 9,
+      "base": 26,
+      "spanB": 52
+    },
+    "KELTNER": {
+      "period": 20,
+      "atrMult": 2
+    },
+    "CMF": {
+      "period": 20
+    },
+    "FISHER": {
+      "period": 10
+    },
+    "PSAR": {
+      "af": 0.02,
+      "maxAF": 0.2
+    }
+  },
+  "validation": {
+    "enabled": false,
+    "epsilon": 1e-6
+  },
+  "input": {
+    "file": "input.csv"
+  },
+  "output": {
+    "file": "output.csv"
+  }
+}
