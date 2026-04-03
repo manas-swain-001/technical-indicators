@@ -10,7 +10,7 @@
  * More recent prices get higher weights (linear weighting).
  */
 
-export function createWMAState(period = 9) {
+export function createWMAState(period = 20) {
     return {
         period,
         prices: [],

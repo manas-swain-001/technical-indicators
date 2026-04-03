@@ -8,7 +8,7 @@
  * Simple arithmetic mean of the last n closing prices.
  */
 
-export function createSMAState(period = 20) {
+export function createSMAState(period = 9) {
     return {
         period,
         prices: [],

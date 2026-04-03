@@ -1,15 +1,11 @@
 /**
- * Stochastic Oscillator
+ * Stochastic Oscillator (Fast & Slow)
  * 
  * MATHEMATICAL DEFINITION:
  * ========================
- * %K = 100 × (Close - Lowest_low) / (Highest_high - Lowest_low)
- * 
- * Where:
- *   Lowest_low = min(Low) over k_period    [typically 14]
- *   Highest_high = max(High) over k_period
- * 
- * %D = SMA(%K, d_period)    [typically 3]
+ * %K (Fast) = 100 × (Close - Lowest_low) / (Highest_high - Lowest_low)
+ * %K (Slow) = SMA(%K (Fast), kSmoothing)
+ * %D = SMA(%K (Slow), dPeriod)
  * 
  * Boundary conditions:
  *   If Highest_high = Lowest_low: %K = 50
@@ -17,14 +13,16 @@
 
 import { createSMAState, updateSMA, getSMAValue } from '../trend/sma.js';
 
-export function createStochasticState(kPeriod = 14, dPeriod = 3) {
+export function createStochasticState(kPeriod = 14, kSmoothing = 3, dPeriod = 3) {
     return {
         kPeriod,
+        kSmoothing,
         dPeriod,
         highs: [],
         lows: [],
         closes: [],
-        kValues: [],
+        rawKValues: [],
+        smoothKState: createSMAState(kSmoothing),
         dState: createSMAState(dPeriod),
         ready: false
     };
@@ -42,83 +40,54 @@ export function updateStochastic(state, candle) {
         state.closes.shift();
     }
 
-    // Calculate %K once we have enough data
+    // Calculate Raw %K once we have enough window data
     if (state.highs.length === state.kPeriod) {
         const highestHigh = Math.max(...state.highs);
         const lowestLow = Math.min(...state.lows);
         const close = state.closes[state.closes.length - 1];
 
-        let kValue;
+        let rawK;
         if (highestHigh === lowestLow) {
-            kValue = 50; // Boundary condition
+            rawK = 50; // Boundary condition
         } else {
-            kValue = 100 * (close - lowestLow) / (highestHigh - lowestLow);
+            rawK = 100 * (close - lowestLow) / (highestHigh - lowestLow);
         }
 
-        state.kValues.push(kValue);
+        // Keep raw array from leaking memory limit
+        state.rawKValues.push(rawK);
+        if (state.rawKValues.length > Math.max(state.kSmoothing, state.dPeriod) * 2) {
+            state.rawKValues.shift();
+        }
 
-        // Update %D (SMA of %K)
-        updateSMA(state.dState, { close: kValue });
+        // Update %K Smoothing (Slow Stoch applies SMA over Raw %K)
+        updateSMA(state.smoothKState, { close: rawK });
 
-        if (state.dState.ready) {
-            state.ready = true;
+        if (state.smoothKState.ready) {
+            // Apply smoothing for standard %K
+            const finalK = getSMAValue(state.smoothKState);
+
+            // Update %D (SMA of final %K)
+            updateSMA(state.dState, { close: finalK });
+
+            if (state.dState.ready) {
+                state.ready = true;
+            }
         }
     }
 }
 
 export function getStochasticValues(state) {
     if (!state.ready) {
-        return { k: null, d: null };
+        return { k: null, d: null, signal: 0 };
     }
 
-    const k = state.kValues[state.kValues.length - 1];
+    const k = getSMAValue(state.smoothKState);
     const d = getSMAValue(state.dState);
 
-    return { k, d };
-}
+    // Matrix Evaluation: Bullish if %K > %D, Neutral 0 if inside nominal bounds, Overbought/Oversold extreme evaluation
+    let signal = 0;
+    if (k > d) signal = 1;      // Bullish Cross
+    else if (k < d) signal = -1;// Bearish Cross
 
-/**
- * Reference calculation for validation
- */
-export function calculateStochasticReference(candles, kPeriod = 14, dPeriod = 3) {
-    if (candles.length < kPeriod + dPeriod - 1) {
-        return { k: null, d: null };
-    }
-
-    const kValues = [];
-
-    for (let i = kPeriod - 1; i < candles.length; i++) {
-        let highestHigh = -Infinity;
-        let lowestLow = Infinity;
-
-        for (let j = i - kPeriod + 1; j <= i; j++) {
-            highestHigh = Math.max(highestHigh, candles[j].high);
-            lowestLow = Math.min(lowestLow, candles[j].low);
-        }
-
-        const close = candles[i].close;
-        let kValue;
-
-        if (highestHigh === lowestLow) {
-            kValue = 50;
-        } else {
-            kValue = 100 * (close - lowestLow) / (highestHigh - lowestLow);
-        }
-
-        kValues.push(kValue);
-    }
-
-    // Calculate %D (SMA of last dPeriod %K values)
-    if (kValues.length < dPeriod) {
-        return { k: null, d: null };
-    }
-
-    const k = kValues[kValues.length - 1];
-    let dSum = 0;
-    for (let i = kValues.length - dPeriod; i < kValues.length; i++) {
-        dSum += kValues[i];
-    }
-    const d = dSum / dPeriod;
-
-    return { k, d };
+    return { k, d, signal };
 }
